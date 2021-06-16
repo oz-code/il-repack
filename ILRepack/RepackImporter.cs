@@ -206,7 +206,7 @@ namespace ILRepacking
                 }
             }
 
-            if (internalize && _options.RenameInternalized && !IsModuleTag(nt))
+            if (internalize && _options.RenameInternalized && !IsModuleTag(nt) && ShouldRenameInternal(nt))
             {
                 string newName = GenerateName(nt);
                 _logger.Verbose("Renaming " + nt.FullName + " into " + newName);
@@ -214,6 +214,23 @@ namespace ILRepacking
             }
 
             return nt;
+        }
+
+        private bool ShouldRenameInternal(TypeDefinition nt)
+        {
+            if (_options.InternalizeRenameMatches.Count == 0)
+            {
+                return true;
+            }
+
+            foreach(var regex in _options.InternalizeRenameMatches) {
+                if (regex.IsMatch(nt.FullName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         //Module tag must't be renamed. Otherwise after two repacks .dll will contain <Model> and <Guid><Model>

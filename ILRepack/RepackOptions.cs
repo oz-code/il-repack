@@ -50,6 +50,28 @@ namespace ILRepacking
             }
         }
 
+        /// <summary>
+        /// Gets or sets a file that contains one regex per line to compare against 
+        /// FullName of types to rename. The items will replace the contents of
+        /// <see cref="InternalizeRenameFile" />. This option only has an effect if
+        /// <see cref="RenameInternalized"/> is set to true. 
+        /// </summary>
+        public string InternalizeRenameFile
+        {
+            get { return internalizeRenameFile; }
+            set
+            {
+                internalizeRenameFile = value;
+                internalizeRenameMatches.Clear();
+                if (!string.IsNullOrEmpty(internalizeRenameFile))
+                {
+                    string[] lines = file.ReadAllLines(internalizeRenameFile);
+                    foreach (var line in lines)
+                        internalizeRenameMatches.Add(new Regex(line));
+                }
+            }
+        }
+
         public int FileAlignment { get; set; } // UNIMPL, not supported by cecil
         public string[] InputAssemblies { get; set; }
         public bool Internalize { get; set; }
@@ -88,6 +110,17 @@ namespace ILRepacking
         {
             get { return excludeInternalizeMatches; }
         }
+
+        /// <summary>
+        /// If Internalize is set to true, any which match these 
+        /// regular expressions will not be internalized. 
+        /// If internalize is false, then this property is ignored.
+        /// </summary>
+        public List<Regex> InternalizeRenameMatches
+        {
+            get { return internalizeRenameMatches; }
+        }
+
         public Hashtable AllowedDuplicateTypes
         {
             get { return allowedDuplicateTypes; }
@@ -103,9 +136,11 @@ namespace ILRepacking
         private readonly Hashtable allowedDuplicateTypes = new Hashtable();
         private readonly List<string> allowedDuplicateNameSpaces = new List<string>();
         private readonly List<Regex> excludeInternalizeMatches = new List<Regex>();
+        private readonly List<Regex> internalizeRenameMatches = new List<Regex>();
         private readonly ICommandLine cmd;
         private readonly IFile file;
         private string excludeFile;
+        private string internalizeRenameFile;
 
         private void AllowDuplicateType(string typeName)
         {
@@ -167,7 +202,11 @@ namespace ILRepacking
                 ExcludeFile = cmd.Option("internalize");
             }
 
-            RenameInternalized = cmd.Modifier("renameinternalized");
+            RenameInternalized = cmd.HasOption("renameinternalized");
+            if (RenameInternalized)
+            {
+                InternalizeRenameFile = cmd.Option("renameinternalized");
+            }
             KeyFile = cmd.Option("keyfile");
             KeyContainer = cmd.Option("keycontainer");
             Log = cmd.HasOption("log");
